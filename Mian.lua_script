@@ -1,0 +1,552 @@
+local redzlib = loadstring(game:HttpGet("https://github.com/ducknovis/redzui/raw/refs/heads/main/redzui.lua"))()
+
+local window = redzlib:MakeWindow({
+    Name = "KALIZEUS Hub l Ilha Bela",
+    SubTitle = "by VitorScript",
+    SaveFolder = "CauHinhGiaoDien"
+})
+
+local mainTab = window:MakeTab({Title = "Main", Icon = ""})
+local tab1 = window:MakeTab({Title = "Players", Icon = ""})
+local tab2 = window:MakeTab({Title = "Esp", Icon = ""})
+local tab3 = window:MakeTab({Title = "Config", Icon = ""})
+
+-- Botão de minimizar (verifique se o ID da imagem é válido)
+window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://97677156808581", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(0, 35) },
+})
+
+-- Discord
+mainTab:AddDiscordInvite({
+    Name = "Dragon Menu",
+    Description = "Entrar no servidor",
+    Logo = "rbxassetid://137903795082783",
+    Invite = "https://discord.gg/RU9XgDyW",
+})
+
+-- Seção
+mainTab:AddSection("Início")
+
+-- Variável de velocidade customizada
+local speedValue = 16
+local speedAtivado = false
+
+-- Toggle de velocidade
+mainTab:AddToggle({
+    Name = "Velocidade",
+    Description = "Ativa/desativa a velocidade",
+    Default = false,
+    Callback = function(enabled)
+        speedAtivado = enabled
+        local player = game.Players.LocalPlayer
+        if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+            if speedAtivado then
+                player.Character.Humanoid.WalkSpeed = speedValue
+                print("Velocidade ativada:", speedValue)
+            else
+                player.Character.Humanoid.WalkSpeed = 16
+                print("Velocidade padrão restaurada")
+            end
+        end
+    end
+})
+
+-- Slider de velocidade
+mainTab:AddSlider({
+    Name = "Velocidade",
+    Min = 1,
+    Max = 170,
+    Increase = 1,
+    Default = 16,
+    Callback = function(value)
+        speedValue = value
+        local player = game.Players.LocalPlayer
+        if speedAtivado and player and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.WalkSpeed = value
+            print("Velocidade ajustada:", value)
+        end
+    end
+})
+
+local fovAtivado = false
+local fovValor = 70 -- valor padrão inicial
+local fovPadrao = 70 -- valor original da câmera
+
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- Função para aplicar o FOV
+local function aplicarFov()
+    if camera then
+        if fovAtivado then
+            camera.FieldOfView = fovValor
+        else
+            camera.FieldOfView = fovPadrao
+        end
+    end
+end
+
+-- Atualiza FOV quando o personagem respawnar
+player.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    aplicarFov()
+end)
+
+-- Toggle para ativar/desativar o FOV customizado
+mainTab:AddToggle({
+    Name = "Campo De Visão",
+    Description = "Ativa/desativa o Campo De Visão",
+    Default = false,
+    Callback = function(enabled)
+        fovAtivado = enabled
+        aplicarFov()
+        print("FOV Ativado:", enabled)
+    end
+})
+
+-- Slider para ajustar o valor do FOV
+mainTab:AddSlider({
+    Name = "Campo De Visão",
+    Min = 1,
+    Max = 170,
+    Default = fovValor,
+    Increase = 1,
+    Callback = function(value)
+        fovValor = value
+        if fovAtivado then
+            aplicarFov()
+        end
+        print("FOV Atual:", value)
+    end
+})
+
+
+-- Pulo infinito
+local UserInputService = game:GetService("UserInputService")
+local infiniteJumpEnabled = false
+
+mainTab:AddToggle({
+    Name = "Pulo Infinito",
+    Description = "Ativa ou desativa o pulo infinito",
+    Default = false,
+    Callback = function(Value)
+        infiniteJumpEnabled = Value
+        print("Pulo Infinito:", Value and "Ativado" or "Desativado")
+    end
+})
+
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJumpEnabled then
+        local player = game.Players.LocalPlayer
+        if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Colisões
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local noclipConnection = nil
+
+function toggleNoclip(enable)
+    if enable then
+        if not noclipConnection then
+            noclipConnection = RunService.Stepped:Connect(function()
+                local character = player.Character
+                if character then
+                    for _, part in pairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        local character = player.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+-- Integrar ao botão
+mainTab:AddToggle({
+    Name = "Desativar Colisões",
+    Description = "Ativa/desativa as colisões",
+    Default = false,
+    Callback = function(Value)
+        toggleNoclip(Value)
+        print("Colisões:", Value and "Desativadas (noclip)" or "Ativadas (normal)")
+    end
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local selectedPlayer = nil
+local observando = false
+
+-- Variável para armazenar o dropdown
+local playerDropdown = nil
+
+-- Função para gerar nomes dos jogadores
+local function GetPlayerNames()
+    local names = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            table.insert(names, p.Name)
+        end
+    end
+    return names
+end
+
+-- Criar o dropdown com os nomes dos jogadores
+playerDropdown = tab1:AddDropdown({
+    Name = "Lista de Jogadores",
+    Description = "Selecione um jogador para visualizar",
+    Options = GetPlayerNames(),
+    Default = nil,
+    Flag = "dropdown_jogadores",
+    Callback = function(Value)
+        selectedPlayer = Players:FindFirstChild(Value)
+        print("Selecionado:", Value)
+    end
+})
+
+
+-- Toggle para observar o jogador selecionado
+tab1:AddToggle({
+    Name = "Visualizar Jogador",
+    Description = "Ativa/desativa a câmera de visualizar o jogador selecionado",
+    Default = false,
+    Callback = function(enabled)
+        observando = enabled
+        if enabled then
+            if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("Humanoid") then
+                Camera.CameraSubject = selectedPlayer.Character.Humanoid
+                print("Assistindo:", selectedPlayer.Name)
+            else
+                warn("Jogador inválido ou sem personagem.")
+            end
+        else
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                Camera.CameraSubject = LocalPlayer.Character.Humanoid
+                print("Câmera resetada para você.")
+            end
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local connections = {}
+local espNomeAtivado = false
+local espDistanciaAtivada = false
+local espPosicao = "Cabeça"
+
+-- Dropdown
+tab2:AddDropdown({
+    Name = "Posição do ESP",
+    Options = {"Cabeça", "Pé"},
+    Default = "Cabeça",
+    Callback = function(value)
+        espPosicao = value
+
+        -- Reaplica ESP com nova posição
+        for _, player in ipairs(Players:GetPlayers()) do
+            local char = player.Character
+            if char then
+                for _, partName in ipairs({"Head", "HumanoidRootPart"}) do
+                    local part = char:FindFirstChild(partName)
+                    if part then
+                        local gui = part:FindFirstChild("ESP")
+                        if gui then gui:Destroy() end
+                    end
+                end
+            end
+            if espNomeAtivado or espDistanciaAtivada then
+                criarESP(player)
+            end
+        end
+    end
+})
+
+-- Criar ESP
+function criarESP(player)
+    if player == LocalPlayer then return end
+
+    task.spawn(function()
+        while (espNomeAtivado or espDistanciaAtivada) and player and player.Parent do
+            local char = player.Character
+            local humanoid = char and char:FindFirstChild("Humanoid")
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local head = char and char:FindFirstChild("Head")
+
+            if humanoid and humanoid.Health > 0 and root and head then
+                local adorneeParte = (espPosicao == "Pé") and root or head
+                local guiExistente = adorneeParte:FindFirstChild("ESP")
+
+                if not guiExistente then
+                    local esp = Instance.new("BillboardGui")
+                    esp.Name = "ESP"
+                    esp.Adornee = adorneeParte
+                    esp.Size = UDim2.new(0, 100, 0, 30)
+                    esp.StudsOffset = (espPosicao == "Pé") and Vector3.new(0, -3.2, 0) or Vector3.new(0, 1.8, 0)
+                    esp.AlwaysOnTop = true
+
+                    -- Nome
+                    local nome = Instance.new("TextLabel")
+                    nome.Name = "Nome"
+                    nome.Size = UDim2.new(1, 0, 0.5, 0)
+                    nome.Position = UDim2.new(0, 0, 0, 0)
+                    nome.BackgroundTransparency = 1
+                    nome.TextColor3 = Color3.new(1, 1, 1)
+                    nome.TextSize = 12
+                    nome.Font = Enum.Font.Gotham
+                    nome.TextStrokeTransparency = 0.4
+                    nome.TextStrokeColor3 = Color3.new(0, 0, 0)
+                    nome.Text = espNomeAtivado and player.Name or ""
+                    nome.Parent = esp
+
+                    -- Distância
+                    local distanciaLabel = Instance.new("TextLabel")
+                    distanciaLabel.Name = "Distancia"
+                    distanciaLabel.Size = UDim2.new(1, 0, 0.5, 0)
+                    distanciaLabel.Position = UDim2.new(0, 0, 0.5, 0)
+                    distanciaLabel.BackgroundTransparency = 1
+                    distanciaLabel.TextColor3 = Color3.new(1, 1, 1)
+                    distanciaLabel.TextSize = 11
+                    distanciaLabel.Font = Enum.Font.Gotham
+                    distanciaLabel.TextStrokeTransparency = 0.4
+                    distanciaLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+                    distanciaLabel.Text = ""
+                    distanciaLabel.Parent = esp
+
+                    esp.Parent = adorneeParte
+
+                    humanoid.Died:Connect(function()
+                        if esp then esp:Destroy() end
+                    end)
+                end
+
+                local espAtual = adorneeParte:FindFirstChild("ESP")
+                if espAtual then
+                    local nomeLabel = espAtual:FindFirstChild("Nome")
+                    if nomeLabel then
+                        nomeLabel.Text = espNomeAtivado and player.Name or ""
+                    end
+
+                    local distanciaLabel = espAtual:FindFirstChild("Distancia")
+                    if distanciaLabel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local distancia = (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude
+                        distanciaLabel.Text = espDistanciaAtivada and (" " .. math.floor(distancia) .. "m") or ""
+                    end
+                end
+            end
+
+            task.wait(0.3)
+        end
+    end)
+end
+
+-- Monitorar jogadores
+function monitorarPlayer(player)
+    if connections[player] then connections[player]:Disconnect() end
+
+    connections[player] = player.CharacterAdded:Connect(function()
+        task.wait(1)
+        if espNomeAtivado or espDistanciaAtivada then
+            criarESP(player)
+        end
+    end)
+
+    criarESP(player)
+end
+
+-- Lógica comum para ativar/desativar
+function atualizarESP()
+    local ativado = espNomeAtivado or espDistanciaAtivada
+
+    if ativado then
+        for _, player in ipairs(Players:GetPlayers()) do
+            monitorarPlayer(player)
+        end
+
+        connections["PlayerAdded"] = Players.PlayerAdded:Connect(function(player)
+            monitorarPlayer(player)
+        end)
+    else
+        for _, player in ipairs(Players:GetPlayers()) do
+            local char = player.Character
+            if char then
+                for _, partName in ipairs({"Head", "HumanoidRootPart"}) do
+                    local part = char:FindFirstChild(partName)
+                    if part then
+                        local esp = part:FindFirstChild("ESP")
+                        if esp then esp:Destroy() end
+                    end
+                end
+            end
+            if connections[player] then
+                connections[player]:Disconnect()
+                connections[player] = nil
+            end
+        end
+
+        if connections["PlayerAdded"] then
+            connections["PlayerAdded"]:Disconnect()
+            connections["PlayerAdded"] = nil
+        end
+    end
+end
+
+-- Toggle: ESP Nome
+tab2:AddToggle({
+    Name = "ESP Nome",
+    Description = "Mostra o nome dos jogadores",
+    Default = false,
+    Callback = function(enabled)
+        espNomeAtivado = enabled
+        atualizarESP()
+    end
+})
+
+-- Toggle: ESP Distância
+tab2:AddToggle({
+    Name = "ESP Distância",
+    Description = "Mostra a distância dos jogadores",
+    Default = false,
+    Callback = function(enabled)
+        espDistanciaAtivada = enabled
+        atualizarESP()
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local skeletons = {}
+local skeletonConnection = nil
+local playerRemovingConnection = nil
+
+-- Partes que formam o esqueleto
+local partsToConnect = {
+    {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
+}
+
+-- Criar esqueleto do jogador
+local function createSkeleton(player)
+    if skeletons[player] then return end
+
+    local lines = {}
+    for _ = 1, #partsToConnect do
+        local line = Drawing.new("Line")
+        line.Color = Color3.new(1, 1, 1) -- branco
+        line.Thickness = 2
+        line.Transparency = 1
+        line.Visible = false
+        table.insert(lines, line)
+    end
+    skeletons[player] = lines
+end
+
+-- Remover esqueleto
+local function removeSkeleton(player)
+    if skeletons[player] then
+        for _, line in pairs(skeletons[player]) do
+            line.Visible = false
+            line:Remove()
+        end
+        skeletons[player] = nil
+    end
+end
+
+-- Atualizar esqueletos
+local function updateSkeletons()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if not skeletons[player] then
+                createSkeleton(player)
+            end
+
+            local lines = skeletons[player]
+            local character = player.Character
+
+            for i, parts in ipairs(partsToConnect) do
+                local part0 = character:FindFirstChild(parts[1])
+                local part1 = character:FindFirstChild(parts[2])
+                local line = lines[i]
+
+                if part0 and part1 then
+                    local pos0, onScreen0 = Camera:WorldToViewportPoint(part0.Position)
+                    local pos1, onScreen1 = Camera:WorldToViewportPoint(part1.Position)
+
+                    if onScreen0 and onScreen1 then
+                        line.From = Vector2.new(pos0.X, pos0.Y)
+                        line.To = Vector2.new(pos1.X, pos1.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
+                end
+            end
+        else
+            removeSkeleton(player)
+        end
+    end
+end
+
+-- Toggle principal
+tab2:AddToggle({
+    Name = "ESP Esqueleto",
+    Description = "Exibe esqueleto nos jogadores",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            -- Conectar atualização contínua
+            skeletonConnection = RunService.RenderStepped:Connect(updateSkeletons)
+
+            -- Remover esqueleto quando jogador sair
+            playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
+                removeSkeleton(player)
+            end)
+        else
+            -- Desconectar
+            if skeletonConnection then
+                skeletonConnection:Disconnect()
+                skeletonConnection = nil
+            end
+
+            if playerRemovingConnection then
+                playerRemovingConnection:Disconnect()
+                playerRemovingConnection = nil
+            end
+
+            -- Remover todos os esqueletos
+            for player in pairs(skeletons) do
+                removeSkeleton(player)
+            end
+        end
+    end
+})
